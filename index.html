@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mini-Grid RMG01 Explorer</title>
+<meta name="description" content="Interactive explorer for an open multi-year operations dataset from a rural solar mini-grid in southern Nigeria.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400&display=swap">
+<style>
+  /* Layout: one centred column of sections; tokens below drive every colour and size. */
+  :root {
+    --color-bg: #fbfbf9; --color-fg: #1d2326; --color-fg-muted: #5c666b; --color-panel: #f0f2f0; --color-border-line: #d9dedb; --color-bad: #b3261e;
+    --series-1: #2c6e8f; --series-2: #c47a1d; --series-3: #7a5aa8;
+    --chart-muted: #9aa5a8; --chart-grid: #e3e7e5; --chart-axis: #b9c1bf; --chart-reference: #7a8589;
+    --text-secondary: #5c666b; --surface-popover: #ffffff; --border: #d9dedb; --shadow-popover: 0 4px 16px rgba(20, 30, 35, .12);
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-size-caption: 0.8125rem; --font-size-body: 0.9375rem; --font-size-heading: 1.25rem; --font-size-title: 1.75rem; --font-weight-medium: 600;
+    --gap-xs: 4px; --gap-sm: 8px; --gap-md: 14px; --gap-lg: 20px; --gap-xl: 36px;
+    --pad-sm: 8px; --pad-md: 12px; --pad-lg: 16px; --radius: 8px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --color-bg: #121617; --color-fg: #e6eae8; --color-fg-muted: #9aa4a8; --color-panel: #1c2224; --color-border-line: #2e3639; --color-bad: #f2867c;
+      --series-1: #6cb4d6; --series-2: #e8a44f; --series-3: #b496e0;
+      --chart-muted: #5b666a; --chart-grid: #262e30; --chart-axis: #3d474a; --chart-reference: #8d989c;
+      --text-secondary: #9aa4a8; --surface-popover: #1f2628; --border: #364043; --shadow-popover: 0 4px 16px rgba(0, 0, 0, .5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --color-bg: #121617; --color-fg: #e6eae8; --color-fg-muted: #9aa4a8; --color-panel: #1c2224; --color-border-line: #2e3639; --color-bad: #f2867c;
+    --series-1: #6cb4d6; --series-2: #e8a44f; --series-3: #b496e0;
+    --chart-muted: #5b666a; --chart-grid: #262e30; --chart-axis: #3d474a; --chart-reference: #8d989c;
+    --text-secondary: #9aa4a8; --surface-popover: #1f2628; --border: #364043; --shadow-popover: 0 4px 16px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  .rmg-loaderr { border: 1px solid var(--color-bad); color: var(--color-bad); border-radius: var(--radius); padding: var(--pad-md) var(--pad-lg); font-size: var(--font-size-caption); line-height: 1.5; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-sans); font-size: var(--font-size-body); line-height: 1.45; }
+  .rmg-page { max-width: 1100px; margin: 0 auto; padding-block: 32px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  a { color: var(--series-1); }
+  .dash-skeleton { background: var(--color-panel); border-radius: var(--radius); }
+  .rmg-code { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; overflow-x: auto; background: var(--color-panel); padding: var(--pad-md); border-radius: var(--radius); white-space: pre; }
+  .rmg-credit { font-size: var(--font-size-caption); color: var(--color-fg-muted); margin: 0; max-width: 72ch; line-height: 1.5; }
+  .rmg-footer { margin-top: var(--gap-xl); padding-top: var(--pad-md); border-top: 1px solid var(--color-border-line); font-size: var(--font-size-caption); color: var(--color-fg-muted); }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+<style>
+  .rmg { display: flex; flex-direction: column; gap: var(--gap-xl); max-width: 1100px; }
+  .rmg h1 { font-family: var(--font-serif); font-weight: 400; font-size: var(--font-size-title); margin: 0; text-wrap: balance; }
+  .rmg h2 { font-size: var(--font-size-heading); font-weight: var(--font-weight-medium); margin: 0; text-wrap: balance; }
+  .rmg h3 { font-size: var(--font-size-body); font-weight: var(--font-weight-medium); margin: 0; }
+  .rmg-head { display: flex; flex-direction: column; gap: var(--gap-sm); }
+  .rmg-headrow { display: flex; flex-wrap: wrap; gap: var(--gap-sm); align-items: center; justify-content: space-between; }
+  .rmg-eyebrow { font-size: var(--font-size-caption); color: var(--color-fg-muted); letter-spacing: .06em; text-transform: uppercase; }
+  .rmg-lede { max-width: 68ch; margin: 0; line-height: 1.55; }
+  .rmg-muted { color: var(--color-fg-muted); font-size: var(--font-size-caption); margin: 0; line-height: 1.5; max-width: 72ch; }
+  .rmg-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--gap-md); }
+  .rmg-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--radius); padding: var(--pad-lg); display: flex; flex-direction: column; gap: var(--gap-xs); min-width: 0; }
+  .rmg-tile .rmg-big { font-family: var(--font-serif); font-weight: 400; font-size: var(--font-size-title); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .rmg-tile .rmg-lbl { font-size: var(--font-size-caption); color: var(--color-fg-muted); }
+  .rmg-tile .rmg-unit { font-family: var(--font-sans); font-size: var(--font-size-body); color: var(--color-fg-muted); }
+  .rmg-sec { display: flex; flex-direction: column; gap: var(--gap-md); min-width: 0; }
+  .rmg-bar { display: flex; flex-wrap: wrap; gap: var(--gap-sm); align-items: center; justify-content: space-between; }
+  .rmg-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--color-border-line); border-radius: var(--radius); overflow: hidden; }
+  .rmg-seg button { font: inherit; font-size: var(--font-size-caption); background: transparent; color: var(--color-fg-muted); border: 0; border-right: 1px solid var(--color-border-line); padding: 6px 10px; cursor: pointer; }
+  .rmg-seg button:last-child { border-right: 0; }
+  .rmg-seg button[aria-pressed="true"] { background: var(--color-panel); color: var(--color-fg); font-weight: var(--font-weight-medium); }
+  .rmg-seg button:focus-visible { outline: 2px solid var(--color-fg); outline-offset: -2px; }
+  .rmg-curbox { display: inline-flex; align-items: center; gap: var(--gap-sm); font-size: var(--font-size-caption); color: var(--color-fg-muted); }
+  .rmg-chart { position: relative; min-height: 260px; width: 100%; }
+  .rmg-chart.rmg-tall { min-height: 320px; }
+  .rmg-svg { display: block; overflow: visible; }
+  .rmg-svg .tick text, .rmg-svg .rmg-axis-text { fill: var(--text-secondary); font-size: var(--font-size-caption); font-family: var(--font-sans); }
+  .rmg-svg .rmg-probe { font-size: var(--font-size-caption); font-family: var(--font-sans); }
+  .rmg-svg .rmg-val { fill: var(--color-fg); font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; font-family: var(--font-sans); }
+  .rmg-tip { position: absolute; pointer-events: none; background: var(--surface-popover); border: 1px solid var(--border); box-shadow: var(--shadow-popover); border-radius: var(--radius); padding: 6px 9px; font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 2; }
+  .rmg-tip div:first-child { color: var(--text-secondary); }
+  .rmg-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--gap-xl); }
+  .rmg-two > * { min-width: 0; }
+  .rmg-legend { display: flex; flex-wrap: wrap; gap: var(--gap-md); font-size: var(--font-size-caption); color: var(--color-fg-muted); }
+  .rmg-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+  .rmg-sw { width: 12px; height: 3px; display: inline-block; border-radius: 2px; }
+  .rmg-sw.rmg-dash { background: repeating-linear-gradient(90deg, var(--chart-reference) 0 4px, transparent 4px 7px); }
+  .rmg-sw.rmg-box { height: 10px; opacity: .35; background: var(--chart-muted); }
+  .rmg-sw.rmg-dash2 { -webkit-mask: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); mask: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px); }
+  .rmg-scroll { overflow: auto; max-height: 440px; border: 1px solid var(--color-border-line); border-radius: var(--radius); }
+  .rmg-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-caption); font-variant-numeric: tabular-nums; }
+  .rmg-table th, .rmg-table td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .rmg-table th:first-child, .rmg-table td:first-child, .rmg-table .rmg-l { text-align: left; }
+  .rmg-table thead th { position: sticky; top: 0; background: var(--color-bg); font-weight: var(--font-weight-medium); color: var(--color-fg-muted); }
+  .rmg-table th[data-sort] { cursor: pointer; }
+  .rmg-table th[aria-sort="descending"]::after { content: " ↓"; }
+  .rmg-table th[aria-sort="ascending"]::after { content: " ↑"; }
+  .rmg-table tbody tr { cursor: pointer; }
+  .rmg-table tbody tr:hover, .rmg-table tbody tr.rmg-sel { background: var(--color-panel); }
+  .rmg-table td.rmg-wrap { white-space: normal; min-width: 160px; max-width: 320px; line-height: 1.4; }
+  .rmg-table tr.rmg-total td { font-weight: var(--font-weight-medium); border-top: 1px solid var(--color-fg-muted); }
+  .rmg-table tr.rmg-dim td { color: var(--color-fg-muted); }
+  #capex-table tbody tr, #opex-table tbody tr, #year-table tbody tr { cursor: default; }
+  #capex-table tbody tr:hover, #opex-table tbody tr:hover, #year-table tbody tr:hover { background: transparent; }
+  .rmg-detail { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--radius); padding: var(--pad-lg); display: flex; flex-direction: column; gap: var(--gap-sm); min-width: 0; }
+  .rmg-stats { display: flex; flex-wrap: wrap; gap: var(--gap-lg); font-size: var(--font-size-caption); color: var(--color-fg-muted); }
+  .rmg-stats b { color: var(--color-fg); font-weight: var(--font-weight-medium); font-variant-numeric: tabular-nums; }
+  .rmg-err { color: var(--color-bad); font-size: var(--font-size-caption); }
+  .rmg-assume { border: 1px solid var(--color-border-line); border-left: 3px solid var(--color-fg-muted); border-radius: var(--radius); padding: var(--pad-md) var(--pad-lg); display: flex; flex-direction: column; gap: var(--gap-sm); }
+  .rmg-assume p { margin: 0; line-height: 1.55; max-width: 76ch; }
+  .rmg details { border-top: 1px solid var(--color-border-line); padding-top: var(--pad-md); }
+  .rmg details summary { cursor: pointer; font-weight: var(--font-weight-medium); }
+  .rmg details ul { line-height: 1.55; max-width: 76ch; padding-left: 1.2em; }
+</style>
+</head>
+<body>
+<main class="rmg-page">
+<div class="rmg">
+  <header class="rmg-head" id="overview">
+    <div class="rmg-headrow">
+      <span class="rmg-eyebrow">Site RMG01 · southern Nigeria · 30 kWp solar, lead-acid storage</span>
+      <div class="rmg-curbox">
+        <span>Currency</span>
+        <div class="rmg-seg" role="group" aria-label="Currency">
+          <button type="button" data-cur="USD" aria-pressed="true">USD</button>
+          <button type="button" data-cur="NGN" aria-pressed="false">NGN</button>
+        </div>
+      </div>
+    </div>
+    <h1>Mini-Grid RMG01 Explorer</h1>
+    <p class="rmg-credit">Built on the open dataset <a href="https://doi.org/10.5281/zenodo.24098636">A Multi-Year Daily Operations Dataset from a Rural Solar Mini-Grid in Southern Nigeria</a> by Tam Kemabonta and Abiye Geoffrey (2026, CC BY 4.0). The analysis and assumptions on this page are ours, not the dataset authors'.</p>
+    <p class="rmg-lede" data-read lang="en">From <span data-draw="v" data-source="kpis" data-field="first_date" data-row="0">—</span> to <span data-draw="v" data-source="kpis" data-field="last_date" data-row="0">—</span>, <b data-draw="v" data-source="kpis" data-field="meters" data-row="0" data-fmt="int">—</b> smart meters recorded <b data-draw="v" data-source="kpis" data-field="metered_kwh" data-row="0" data-fmt="int">—</b> kWh, and <b data-draw="v" data-source="kpis" data-field="paying_customers" data-row="0" data-fmt="int">—</b> customers bought <span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><b data-draw="v" data-source="kpis" data-usd="pay_usd" data-ngn="pay_ngn" data-field="pay_usd" data-row="0" data-fmt="int">—</b> of credit. It is assumed that many meters were in use, on keypad tokens, for months or years before they sent any readings, so metered energy understates what was delivered until late 2024.</p>
+  </header>
+
+  <div class="rmg-tiles" id="unit-tiles">
+    <div class="rmg-tile" id="tile-capex-conn"><span class="rmg-lbl">CAPEX per connection</span><span class="rmg-big"><span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="unit_metrics" data-usd="capex_per_connection_usd" data-ngn="capex_per_connection_ngn" data-field="capex_per_connection_usd" data-row="0" data-fmt="int">—</span></span><span class="rmg-lbl">Actual build cost ÷ <span data-draw="v" data-source="unit_metrics" data-field="connections" data-row="0" data-fmt="int">—</span> connections. USD at the 2019 rate (350 NGN/USD).</span></div>
+    <div class="rmg-tile" id="tile-opex-conn"><span class="rmg-lbl">OPEX per connection</span><span class="rmg-big"><span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="unit_metrics" data-usd="opex_per_connection_usd_month" data-ngn="opex_per_connection_ngn_month" data-field="opex_per_connection_usd_month" data-row="0" data-fmt-usd="2" data-fmt-ngn="int">—</span><span class="rmg-unit"> /month</span></span><span class="rmg-lbl">Maintenance + materials per active connection, average of <span data-draw="v" data-source="unit_metrics" data-field="opex_years" data-row="0">—</span>. Excludes labour, platform fees and one-off repairs.</span></div>
+    <div class="rmg-tile" id="tile-arpu"><span class="rmg-lbl">ARPU</span><span class="rmg-big"><span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="unit_metrics" data-usd="arpu_usd_month" data-ngn="arpu_ngn_month" data-field="arpu_usd_month" data-row="0" data-fmt-usd="2" data-fmt-ngn="int">—</span><span class="rmg-unit"> /month</span></span><span class="rmg-lbl">Credit bought ÷ active connections each month, averaged over Aug 2020–Dec 2024. 2024: <span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="unit_metrics" data-usd="arpu_usd_month_last12" data-ngn="arpu_ngn_month_last12" data-field="arpu_usd_month_last12" data-row="0" data-fmt-usd="2" data-fmt-ngn="int">—</span></span></div>
+    <div class="rmg-tile" id="tile-acpu"><span class="rmg-lbl">ACPU</span><span class="rmg-big"><span data-draw="v" data-source="unit_metrics" data-field="acpu_wh_day" data-row="0" data-fmt="int">—</span><span class="rmg-unit"> Wh/day</span></span><span class="rmg-lbl">Metered Wh per reporting meter per day, averaged over months. Assumes meters not reporting used about the same. 2024: <span data-draw="v" data-source="unit_metrics" data-field="acpu_wh_day_last12" data-row="0" data-fmt="int">—</span> Wh/day</span></div>
+  </div>
+
+  <aside class="rmg-assume" id="assumption" data-read lang="en">
+    <h3>How connections are counted</h3>
+    <p>A connection is a customer who has bought credit at least once. They count as active from their first payment to the end of the data, even through long gaps between payments, because the dataset has no record of any meter or customer being removed. Payments are taken as proof the meter was installed and working. Where the meter sent no readings, it is assumed to have been running offline on keypad tokens, not missing. On this basis most meters were installed in the first months, and the slow rise in reporting meters reflects years of work to bring meters online.</p>
+    <p class="rmg-muted">That gives <span data-draw="v" data-source="unit_metrics" data-field="connections" data-row="0" data-fmt="int">—</span> connections, against <span data-draw="v" data-source="unit_metrics" data-field="linked_meters" data-row="0" data-fmt="int">—</span> meters linked to a customer, <span data-draw="v" data-source="unit_metrics" data-field="meters_with_readings" data-row="0" data-fmt="int">—</span> linked meters with readings and 220 meters purchased. The customer file holds <span data-draw="v" data-source="unit_metrics" data-field="accounts" data-row="0" data-fmt="int">—</span> accounts, including accounts that never paid, which are not counted. USD figures convert naira at approximate yearly rates (listed under Data and method), because the naira lost most of its value over 2023–24. CAPEX uses the operator's 2019 rate of 350 NGN/USD.</p>
+  </aside>
+
+  <section class="rmg-sec" id="arpu-section">
+    <h2>ARPU and active connections</h2>
+    <p class="rmg-muted">Active connections reached <span data-draw="v" data-source="conn_monthly" data-field="active_connections" data-where="month=2020-12" data-fmt="int">—</span> by Dec 2020, while only <span data-draw="v" data-source="conn_monthly" data-field="meters_reporting" data-where="month=2020-12" data-fmt="int">—</span> meters had sent a reading. Reporting meters caught up only in 2023–24; the gap that remains is customers with no linked meter or a meter that never reported. <span data-cur-show="USD">In dollars, ARPU fell from several dollars in 2020–21 to under one dollar in 2024, much of it from the naira losing value.</span><span data-cur-show="NGN" hidden>In naira, ARPU fell by about 40% between 2021 and 2024, even though the stated tariff tripled.</span></p>
+    <div class="rmg-legend">
+      <span><i class="rmg-sw" data-draw="swatch0"></i>ARPU, <span data-cur-show="USD">USD</span><span data-cur-show="NGN" hidden>NGN</span> per active connection per month (left axis)</span>
+      <span><i class="rmg-sw" data-draw="swatch1"></i>Active connections (right axis)</span>
+      <span><i class="rmg-sw rmg-dash2" data-draw="swatch1"></i>Meters that have started reporting (right axis)</span>
+      <span><i class="rmg-sw rmg-box"></i>Supply interruption, Apr–Jun 2023</span>
+    </div>
+    <div class="rmg-chart rmg-tall" id="arpu-chart" data-draw="arpuchart" data-source="conn_monthly"></div>
+  </section>
+
+  <div class="rmg-tiles" id="tiles">
+    <div class="rmg-tile" id="tile-kwh"><span class="rmg-lbl">Metered energy, all days</span><span class="rmg-big"><span data-draw="v" data-source="kpis" data-field="metered_kwh" data-row="0" data-fmt="int">—</span> kWh</span><span class="rmg-lbl"><span data-draw="v" data-source="kpis" data-field="days_with_data" data-row="0" data-fmt="int">—</span> days with readings</span></div>
+    <div class="rmg-tile" id="tile-ngn"><span class="rmg-lbl">Credit bought (PAY)</span><span class="rmg-big"><span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="kpis" data-usd="pay_usd" data-ngn="pay_ngn" data-field="pay_usd" data-row="0" data-fmt="int">—</span></span><span class="rmg-lbl"><span data-draw="v" data-source="kpis" data-field="pay_count" data-row="0" data-fmt="int">—</span> top-ups, median <span data-cur-show="USD">$</span><span data-cur-show="NGN" hidden>NGN </span><span data-draw="v" data-source="kpis" data-usd="median_topup_usd" data-ngn="median_topup_ngn" data-field="median_topup_usd" data-row="0" data-fmt-usd="2" data-fmt-ngn="int">—</span></span></div>
+    <div class="rmg-tile" id="tile-meters"><span class="rmg-lbl">Meters with readings</span><span class="rmg-big" data-draw="v" data-source="kpis" data-field="meters" data-row="0" data-fmt="int">—</span><span class="rmg-lbl">of 220 meters purchased</span></div>
+    <div class="rmg-tile" id="tile-customers"><span class="rmg-lbl">Customers who ever paid</span><span class="rmg-big" data-draw="v" data-source="kpis" data-field="paying_customers" data-row="0" data-fmt="int">—</span><span class="rmg-lbl">at least one PAY record</span></div>
+  </div>
+
+  <section class="rmg-sec" id="timeline-section">
+    <div class="rmg-bar">
+      <h2>Month by month</h2>
+      <div class="rmg-seg" role="group" aria-label="Metric">
+        <button type="button" data-metric="kwh_per_day" aria-pressed="true">kWh per day</button>
+        <button type="button" data-metric="cash" aria-pressed="false">Cash collected</button>
+        <button type="button" data-metric="price" aria-pressed="false">Price per kWh</button>
+        <button type="button" data-metric="connections" aria-pressed="false">Connections</button>
+      </div>
+    </div>
+    <p class="rmg-muted" data-note="kwh_per_day">Mean daily kWh summed over meters that sent readings. Energy used by meters running offline is not included, so this understates delivery until late 2024.</p>
+    <p class="rmg-muted" data-note="cash" hidden>Credit purchases (PAY) per month. These are top-ups, not the value of energy used.</p>
+    <p class="rmg-muted" data-note="price" hidden>All cash collected per metered kWh overstates the price, because it includes customers whose meters were not reporting. Counting only customers whose meter was reporting gives a price close to the stated tariff in 2020–22, but well below NGN 350 in late 2023, which suggests that rise took effect later than stated. Partial months and months under 100 kWh are left out.</p>
+    <p class="rmg-muted" data-note="connections" hidden>Active connections (customers who have paid at least once) against meters that have started reporting. Most connections were active within months; reporting took years to catch up.</p>
+    <div class="rmg-legend" id="timeline-legend">
+      <span><i class="rmg-sw" data-draw="swatch0"></i><span data-note-label="kwh_per_day">kWh per day</span><span data-note-label="cash" hidden>Cash collected</span><span data-note-label="price" hidden>All cash per metered kWh</span><span data-note-label="connections" hidden>Active connections</span></span>
+      <span data-note="price" hidden><i class="rmg-sw" data-draw="swatch1"></i>Reporting customers' cash per kWh</span>
+      <span data-note="connections" hidden><i class="rmg-sw" data-draw="swatch1"></i>Meters that have started reporting</span>
+      <span data-note="price" hidden><i class="rmg-sw rmg-dash"></i>Stated tariff</span>
+      <span><i class="rmg-sw rmg-box"></i>Supply interruption, Apr–Jun 2023</span>
+    </div>
+    <div class="rmg-chart rmg-tall" id="timeline" data-draw="timeline" data-source="monthly conn_monthly site_monthly tariffs fx"></div>
+  </section>
+
+  <section class="rmg-sec" id="years">
+    <h2>Year by year</h2>
+    <div class="rmg-scroll" style="max-height:none">
+      <table class="rmg-table" id="year-table" data-source="yearly" data-row-key="year">
+        <thead><tr>
+          <th data-field="year">Year</th>
+          <th data-field="days">Days with data</th>
+          <th data-field="kwh">Metered kWh</th>
+          <th data-field="kwh_per_day">kWh per day</th>
+          <th data-field="usd" data-cur-show="USD">Cash collected (USD)</th>
+          <th data-field="ngn" data-cur-show="NGN" hidden>Cash collected (NGN)</th>
+          <th data-field="payments">Top-ups</th>
+          <th data-field="usd_per_kwh" data-cur-show="USD">USD per kWh</th>
+          <th data-field="ngn_per_kwh" data-cur-show="NGN" hidden>NGN per kWh</th>
+          <th data-field="mean_meters">Meters reporting</th>
+        </tr></thead>
+        <tbody data-draw="yeartable"></tbody>
+      </table>
+    </div>
+    <p class="rmg-muted">2020 starts on 26 Aug and 2025 ends on 25 Jan. 2023 has no meter data for 38 days of the supply interruption. Price per kWh divides all cash by metered kWh only, so it overstates the price paid while meters were running offline (most of 2020–24).</p>
+  </section>
+
+  <section class="rmg-sec" id="daily-section">
+    <div class="rmg-bar">
+      <h2>Day by day</h2>
+      <div class="rmg-seg" role="group" aria-label="Year">
+        <button type="button" data-year="all" aria-pressed="false">All</button>
+        <button type="button" data-year="2020" aria-pressed="false">2020</button>
+        <button type="button" data-year="2021" aria-pressed="false">2021</button>
+        <button type="button" data-year="2022" aria-pressed="false">2022</button>
+        <button type="button" data-year="2023" aria-pressed="false">2023</button>
+        <button type="button" data-year="2024" aria-pressed="true">2024</button>
+      </div>
+    </div>
+    <p class="rmg-muted">The site-level series is measured at the data concentrator and starts in June 2022. It runs well above the sum of the meters (about 18% overall, up to 50% in 2022), then the two converge in September 2024, as the last offline meters started reporting. The dataset attributes the gap to an unmetered air conditioner and theft; under this page's assumption most of it is paid-for energy used by meters that were not yet reporting.</p>
+    <div class="rmg-legend">
+      <span><i class="rmg-sw" data-draw="swatch0"></i>Sum of meters</span>
+      <span><i class="rmg-sw" data-draw="swatch1"></i>Site-level series</span>
+    </div>
+    <div class="rmg-chart" id="daily" data-draw="daily" data-source="site_daily"></div>
+  </section>
+
+  <section class="rmg-sec" id="meters-section">
+    <div class="rmg-bar">
+      <h2>Meters</h2>
+      <div class="rmg-seg" role="group" aria-label="Customer class">
+        <button type="button" data-cls="all" aria-pressed="true">All</button>
+        <button type="button" data-cls="residential" aria-pressed="false">Residential</button>
+        <button type="button" data-cls="non-residential" aria-pressed="false">Non-residential</button>
+      </div>
+    </div>
+    <p class="rmg-muted">The top 10 meters used <b data-draw="v" data-source="kpis" data-field="top10_share_pct" data-row="0" data-fmt="1">—</b>% of all metered energy, and the top fifth used <b data-draw="v" data-source="kpis" data-field="top20pct_share_pct" data-row="0" data-fmt="1">—</b>%. Non-residential meters used <b data-draw="v" data-source="kpis" data-field="nonres_share_pct" data-row="0" data-fmt="1">—</b>%. Pick a row to see that meter's history.</p>
+    <div class="rmg-two">
+      <div class="rmg-scroll">
+        <table class="rmg-table" id="meter-table" data-source="meters" data-row-key="meter">
+          <thead><tr>
+            <th data-field="meter" data-sort="meter">Meter</th>
+            <th data-field="class" class="rmg-l" data-sort="class">Class</th>
+            <th data-field="kwh" data-sort="kwh" aria-sort="descending">kWh</th>
+            <th data-field="share_pct" data-sort="share_pct">Share %</th>
+            <th data-field="kwh_per_day" data-sort="kwh_per_day">kWh/day</th>
+            <th data-field="zero_pct" data-sort="zero_pct">Zero days %</th>
+            <th data-field="first_month" data-sort="first_month">First</th>
+            <th data-field="last_month" data-sort="last_month">Last</th>
+          </tr></thead>
+          <tbody data-draw="metertable"></tbody>
+        </table>
+      </div>
+      <div class="rmg-detail" id="meter-detail">
+        <h3 data-draw="metername">—</h3>
+        <div class="rmg-stats" data-draw="meterstats">—</div>
+        <div class="rmg-chart" data-draw="meterchart" data-source="meter_monthly"></div>
+        <p class="rmg-muted">Mean kWh per day in each month. Months with no readings are gaps.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="rmg-sec" id="payments-section">
+    <h2>Payments</h2>
+    <p class="rmg-muted">Two agents took <b data-draw="v" data-source="kpis" data-field="top2_agent_share_pct" data-row="0" data-fmt="1">—</b>% of all credit sales. Most top-ups are small: the median is NGN <b data-draw="v" data-source="kpis" data-field="median_topup_ngn" data-row="0" data-fmt="int">—</b>.</p>
+    <div class="rmg-two">
+      <div class="rmg-sec" id="agents">
+        <h3>Credit sold by agent (<span data-cur-show="USD">USD</span><span data-cur-show="NGN" hidden>NGN</span>)</h3>
+        <div class="rmg-chart" data-draw="agents" data-source="agents"></div>
+      </div>
+      <div class="rmg-sec" id="topups">
+        <h3>Top-ups by size (count, NGN bands)</h3>
+        <div class="rmg-chart" data-draw="topups" data-source="topups"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="rmg-sec" id="season-section">
+    <h2>Seasons</h2>
+    <p class="rmg-muted">Mean kWh per reporting meter per day, by calendar month, across all years. Days in the 2023 low-use window are left out. Use per meter is highest in December and lowest in June–July, but the seasonal swing is modest.</p>
+    <div class="rmg-chart" id="season" data-draw="season" data-source="season"></div>
+  </section>
+
+  <section class="rmg-sec" id="costs-section">
+    <h2>Costs</h2>
+    <p class="rmg-lede" data-read lang="en">The site cost NGN <b data-draw="v" data-source="costs" data-field="build_ngn" data-row="0" data-fmt="int">—</b> to build (USD <b data-draw="v" data-source="costs" data-field="build_usd" data-row="0" data-fmt="int">—</b> at the 2019 rate the operator used). All credit bought over the whole period adds up to <b data-draw="v" data-source="costs" data-field="revenue_share_of_build_pct" data-row="0" data-fmt="1">—</b>% of that in naira. In 2024, grid maintenance and materials came to <b data-draw="v" data-source="opex_years" data-field="cost_share_pct" data-where="year=2024" data-fmt="int">—</b>% of the cash collected that year.</p>
+    <p class="rmg-muted">All cost figures come from operator documents and company accounts, not a site ledger. Labour and metering platform fees exist but are not recorded, so running costs are understated.</p>
+
+    <h3>Build cost (CAPEX), full table</h3>
+    <div class="rmg-scroll" style="max-height:none">
+      <table class="rmg-table" id="capex-table" data-source="capex" data-row-key="record,category">
+        <thead><tr>
+          <th data-field="record">Record</th>
+          <th data-field="category" class="rmg-l">Category</th>
+          <th data-field="items_included" class="rmg-l">Items included</th>
+          <th data-field="cost_NGN">Cost (NGN)</th>
+          <th data-field="cost_USD">Cost (USD)</th>
+          <th data-field="share_of_total_pct">Share %</th>
+          <th data-field="exchange_rate_NGN_per_USD">NGN per USD</th>
+          <th data-field="notes" class="rmg-l">Notes</th>
+        </tr></thead>
+        <tbody data-draw="capextable"></tbody>
+      </table>
+    </div>
+    <p class="rmg-muted">The source table gives both currencies. USD values divide naira by a fixed 2019 rate (350 for actual cost, 360 for the estimate), not the rate on the purchase dates. The 2019 estimate describes the design, not what was built.</p>
+
+    <div class="rmg-two">
+      <div class="rmg-sec" id="opex-chart-block">
+        <h3>Running costs against cash collected (<span data-cur-show="USD">USD</span><span data-cur-show="NGN" hidden>NGN</span>)</h3>
+        <div class="rmg-legend">
+          <span><i class="rmg-sw" data-draw="swatch0"></i>Cash collected</span>
+          <span><i class="rmg-sw" data-draw="swatch1"></i>Maintenance + materials</span>
+          <span><i class="rmg-sw" data-draw="swatch2"></i>One-off repairs</span>
+        </div>
+        <div class="rmg-chart" data-draw="opexchart" data-source="opex_years"></div>
+        <p class="rmg-muted">Company-account lines for 2022–24. The 2022 repairs are the inverter replacement and a service invoice.</p>
+      </div>
+      <div class="rmg-sec" id="opex-table-block">
+        <h3>Operating cost lines (OPEX), full table</h3>
+        <div class="rmg-scroll" style="max-height:none">
+          <table class="rmg-table" id="opex-table" data-source="opex" data-row-key="period,item">
+            <thead><tr>
+              <th data-field="period" class="rmg-l">Period</th>
+              <th data-field="item" class="rmg-l">Item</th>
+              <th data-field="amount">Amount</th>
+              <th data-field="unit" class="rmg-l">Unit</th>
+            </tr></thead>
+            <tbody data-draw="opextable"></tbody>
+          </table>
+        </div>
+        <p class="rmg-muted">Shown in the units of the source documents.</p>
+      </div>
+    </div>
+  </section>
+
+  <details id="method">
+    <summary>Data and method</summary>
+    <div id="method-body"></div>
+  </details>
+
+  <details id="notes">
+    <summary>About this data</summary>
+    <ul>
+      <li>Source: Kemabonta and Geoffrey (2026), <i>A Multi-Year Daily Operations Dataset from a Rural Solar Mini-Grid in Southern Nigeria</i>, CC BY 4.0, doi:10.5281/zenodo.24098636.</li>
+      <li>Connections are customers who have paid at least once, counted as active from their first payment onward; see "How connections are counted" at the top. This is an assumption: the dataset has no installation or removal records, and the customer-meter link is a snapshot with no history.</li>
+      <li>The currency switch converts naira to dollars at approximate yearly average rates (listed under Data and method; not part of the dataset). Each payment or cost is converted at its own year's rate. CAPEX uses the 2019 rate in the source table.</li>
+      <li>Payments are credit purchases (PAY records only). They are not the value of energy used, so price per kWh mixes the two.</li>
+      <li>Tariff change dates are approximate: NGN 165 to Jul 2023, NGN 350 from Jul 2023, about NGN 500 from about Feb 2024.</li>
+      <li>A zero meter-day can mean no use, a switched-off meter or no supply. Repeated identical readings rise to 12–14% of meter-days in 2023–24.</li>
+      <li>The per-meter table aggregates daily readings to months; it is built by scripts/build_meter_monthly.py.</li>
+      <li>No PV generation, battery, voltage or hourly data exists in the dataset.</li>
+    </ul>
+  </details>
+<footer class="rmg-footer">Data: Kemabonta, T., &amp; Geoffrey, A. (2026), doi:<a href="https://doi.org/10.5281/zenodo.24098636">10.5281/zenodo.24098636</a>, CC BY 4.0. Copies of the data files used here are in the <code>data/</code> folder of this site's repository.</footer>
+</div>
+</main>
+
+<script src="vendor/d3.min.js"></script>
+<script src="data/data.js"></script>
+<script src="js/runtime.js"></script>
+<script>
+// ---------- derived values ----------
+dash.calc('kpis', {
+  inputs: ['site_daily', 'payments', 'meter_monthly', 'fx'],
+  title: 'Headline figures',
+  description: 'Totals over the whole dataset: metered kWh, credit bought (NGN, and USD at each year\'s rate), meters, paying customers and concentration shares.',
+  fn: (siteDaily, payments, meterMonthly, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const isNum = (v) => v !== null && v !== undefined && v !== '';
+    const sum = (a) => a.reduce((s, x) => s + x, 0);
+    const median = (a) => { const s = a.slice().sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    const days = siteDaily.filter((r) => isNum(r.site_kwh_sum_of_meters));
+    const kwh = sum(days.map((r) => +r.site_kwh_sum_of_meters));
+    const pay = payments.filter((r) => r.type === 'PAY');
+    const amounts = pay.map((r) => +r.amount_NGN);
+    const amountsUsd = pay.map((r) => +r.amount_NGN / rate.get(r.date.slice(0, 4)));
+    const byMeter = new Map();
+    let nonres = 0;
+    for (const r of meterMonthly) {
+      byMeter.set(r.meter, (byMeter.get(r.meter) || 0) + +r.kwh);
+      if (r.customer_class !== 'residential') nonres += +r.kwh;
+    }
+    const meterTotals = [...byMeter.values()].sort((a, b) => b - a);
+    const meterSum = sum(meterTotals);
+    const byAgent = new Map();
+    for (const r of pay) byAgent.set(r.agent_code || 'none', (byAgent.get(r.agent_code || 'none') || 0) + +r.amount_NGN);
+    const agentTotals = [...byAgent.values()].sort((a, b) => b - a);
+    const payTotal = sum(amounts);
+    const pct = (x) => Math.round(x * 1000) / 10;
+    return [{
+      first_date: days[0].date,
+      last_date: days[days.length - 1].date,
+      days_with_data: days.length,
+      metered_kwh: Math.round(kwh),
+      mean_daily_kwh: Math.round((kwh / days.length) * 10) / 10,
+      pay_ngn: payTotal,
+      pay_usd: Math.round(sum(amountsUsd)),
+      pay_count: pay.length,
+      median_topup_ngn: median(amounts),
+      median_topup_usd: Math.round(median(amountsUsd) * 100) / 100,
+      meters: meterTotals.length,
+      paying_customers: new Set(pay.map((r) => r.customer_code)).size,
+      top10_share_pct: pct(sum(meterTotals.slice(0, 10)) / meterSum),
+      top20pct_share_pct: pct(sum(meterTotals.slice(0, Math.round(meterTotals.length / 5))) / meterSum),
+      nonres_share_pct: pct(nonres / meterSum),
+      top2_agent_share_pct: pct((agentTotals[0] + agentTotals[1]) / payTotal),
+    }];
+  },
+});
+
+dash.calc('monthly', {
+  inputs: ['site_monthly', 'tariffs', 'fx'],
+  title: 'Monthly series with stated tariff',
+  description: 'Site_Monthly with cash collected and cash per metered kWh in NGN and USD, and the operator tariff for each month.',
+  fn: (months, tariffs, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const isNum = (v) => v !== null && v !== undefined && v !== '';
+    const t = tariffs.filter((r) => r.record_type === 'tariff')
+      .map((r) => ({ start: r.period_start, end: r.period_end, price: +r.price_high_NGN_per_kWh }));
+    return months.map((m) => {
+      const fxm = rate.get(m.month.slice(0, 4));
+      const kwh = isNum(m.site_kwh_sum_of_meters) ? +m.site_kwh_sum_of_meters : null;
+      const ngn = +m.cash_payments_NGN;
+      const tr = t.find((x) => m.month >= x.start && (x.end === 'open' || m.month < x.end));
+      const perKwh = kwh !== null && kwh >= 100 ? ngn / kwh : null;
+      return {
+        month: m.month,
+        kwh_per_day: isNum(m.mean_daily_kwh_sum_of_meters) ? +m.mean_daily_kwh_sum_of_meters : null,
+        kwh: kwh === null ? null : Math.round(kwh * 10) / 10,
+        ngn,
+        usd: Math.round((ngn / fxm) * 100) / 100,
+        ngn_per_kwh: perKwh === null ? null : Math.round(perKwh),
+        usd_per_kwh: perKwh === null ? null : Math.round((perKwh / fxm) * 1000) / 1000,
+        tariff: tr ? tr.price : null,
+        tariff_usd: tr ? Math.round((tr.price / fxm) * 1000) / 1000 : null,
+        meters: isNum(m.mean_meters_reporting) ? +m.mean_meters_reporting : null,
+      };
+    });
+  },
+});
+
+dash.calc('yearly', {
+  inputs: ['site_daily', 'fx'],
+  title: 'Yearly totals',
+  description: 'Site_Daily summed by calendar year, with cash collected in NGN and USD and cash per metered kWh.',
+  fn: (siteDaily, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const isNum = (v) => v !== null && v !== undefined && v !== '';
+    const by = new Map();
+    for (const r of siteDaily) {
+      const y = r.date.slice(0, 4);
+      let o = by.get(y);
+      if (!o) { o = { kwh: 0, days: 0, ngn: 0, payments: 0, meters: 0 }; by.set(y, o); }
+      if (isNum(r.site_kwh_sum_of_meters)) { o.kwh += +r.site_kwh_sum_of_meters; o.days++; o.meters += +r.meters_reporting; }
+      o.ngn += +(r.cash_payments_NGN || 0);
+      o.payments += +(r.payment_count || 0);
+    }
+    return [...by.entries()].map(([year, o]) => ({
+      year,
+      days: o.days,
+      kwh: Math.round(o.kwh),
+      kwh_per_day: Math.round((o.kwh / o.days) * 10) / 10,
+      ngn: o.ngn,
+      usd: Math.round(o.ngn / rate.get(year)),
+      payments: o.payments,
+      ngn_per_kwh: Math.round(o.ngn / o.kwh),
+      usd_per_kwh: Math.round((o.ngn / o.kwh / rate.get(year)) * 1000) / 1000,
+      mean_meters: Math.round((o.meters / o.days) * 10) / 10,
+    }));
+  },
+});
+
+dash.calc('meters', {
+  inputs: ['meter_monthly'],
+  title: 'Per-meter totals',
+  description: 'Each meter over the whole period: kWh, share of all metered kWh, kWh per reporting day and share of zero days.',
+  fn: (meterMonthly) => {
+    const m = new Map();
+    for (const r of meterMonthly) {
+      let o = m.get(r.meter);
+      if (!o) { o = { meter: r.meter, cls: r.customer_class, kwh: 0, days: 0, zero: 0, first: r.month, last: r.month }; m.set(r.meter, o); }
+      o.kwh += +r.kwh; o.days += +r.days; o.zero += +r.zero_days;
+      if (r.month < o.first) o.first = r.month;
+      if (r.month > o.last) o.last = r.month;
+    }
+    const rows = [...m.values()].sort((a, b) => b.kwh - a.kwh);
+    const total = rows.reduce((s, r) => s + r.kwh, 0);
+    return rows.map((r) => ({
+      meter: r.meter,
+      class: r.cls,
+      kwh: Math.round(r.kwh * 10) / 10,
+      share_pct: Math.round((r.kwh / total) * 1000) / 10,
+      kwh_per_day: Math.round((r.kwh / r.days) * 1000) / 1000,
+      days: r.days,
+      zero_pct: Math.round((r.zero / r.days) * 1000) / 10,
+      first_month: r.first,
+      last_month: r.last,
+    }));
+  },
+});
+
+dash.calc('agents', {
+  inputs: ['payments', 'fx'],
+  title: 'Credit sold by agent',
+  description: 'PAY records summed by agent code, in NGN and in USD at each payment year\'s rate.',
+  fn: (payments, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const m = new Map();
+    let total = 0;
+    for (const r of payments) {
+      if (r.type !== 'PAY') continue;
+      const k = r.agent_code || 'No agent';
+      const o = m.get(k) || { ngn: 0, usd: 0, n: 0 };
+      o.ngn += +r.amount_NGN; o.usd += +r.amount_NGN / rate.get(r.date.slice(0, 4)); o.n++; total += +r.amount_NGN;
+      m.set(k, o);
+    }
+    return [...m.entries()].map(([agent, o]) => ({ agent, ngn: o.ngn, usd: Math.round(o.usd), payments: o.n, share_pct: Math.round((o.ngn / total) * 1000) / 10 }))
+      .sort((a, b) => b.ngn - a.ngn);
+  },
+});
+
+dash.calc('topups', {
+  inputs: ['payments'],
+  title: 'Top-ups by size',
+  description: 'Count of PAY records in each amount band (NGN).',
+  fn: (payments) => {
+    const bands = [[0, 100, '≤100'], [100, 200, '101–200'], [200, 300, '201–300'], [300, 500, '301–500'], [500, 1000, '501–1,000'], [1000, Infinity, '>1,000']];
+    const counts = bands.map(() => 0);
+    for (const r of payments) {
+      if (r.type !== 'PAY') continue;
+      const a = +r.amount_NGN;
+      const i = bands.findIndex(([lo, hi]) => a > lo && a <= hi);
+      if (i >= 0) counts[i]++;
+    }
+    return bands.map(([, , band], i) => ({ band, count: counts[i] }));
+  },
+});
+
+dash.calc('season', {
+  inputs: ['site_daily'],
+  title: 'Use by calendar month',
+  description: 'Mean of daily (sum of meters ÷ meters reporting) for each calendar month, excluding low-use and gap days.',
+  fn: (siteDaily) => {
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const acc = names.map(() => ({ s: 0, n: 0 }));
+    for (const r of siteDaily) {
+      const k = r.site_kwh_sum_of_meters, m = +r.meters_reporting;
+      if (k === null || k === undefined || k === '' || !m) continue;
+      const f = r.data_flag || '';
+      if (f.includes('low_use') || f.includes('gap')) continue;
+      const i = +r.date.slice(5, 7) - 1;
+      acc[i].s += +k / m; acc[i].n++;
+    }
+    return names.map((month, i) => ({ month, kwh_per_meter_day: Math.round((acc[i].s / acc[i].n) * 1000) / 1000, days: acc[i].n }));
+  },
+});
+
+dash.calc('opex_years', {
+  inputs: ['opex', 'yearly', 'fx'],
+  title: 'Running costs against cash collected',
+  description: 'Company-account maintenance and materials lines and one-off repairs per year, beside cash collected (PAY) that year, in NGN and USD.',
+  fn: (opex, yearly, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const years = ['2022', '2023', '2024'];
+    return years.map((year) => {
+      const lines = opex.filter((r) => r.period && String(r.period).startsWith(year) && r.unit && r.amount !== null && r.amount !== '');
+      const sumOf = (pred) => lines.filter(pred).reduce((s, r) => s + +r.amount, 0);
+      const maintenance = sumOf((r) => r.item === 'Grid maintenance');
+      const materials = sumOf((r) => r.item === 'Direct materials');
+      const one_off = sumOf((r) => String(r.unit).includes('one-off'));
+      const y = yearly.find((r) => r.year === year);
+      const cash = y ? y.ngn : null;
+      const fxy = rate.get(year);
+      const usd = (v) => (v === null ? null : Math.round(v / fxy));
+      return {
+        year, cash_collected: cash, maintenance, materials, recurring: maintenance + materials, one_off,
+        cash_collected_usd: usd(cash), recurring_usd: usd(maintenance + materials), one_off_usd: usd(one_off),
+        cost_share_pct: cash ? Math.round(((maintenance + materials) / cash) * 100) : null,
+      };
+    });
+  },
+});
+
+dash.calc('costs', {
+  inputs: ['capex', 'payments'],
+  title: 'Build cost against credit bought',
+  description: 'Actual build cost from the CAPEX table, and all PAY records as a share of it.',
+  fn: (capex, payments) => {
+    const total = capex.find((r) => r.record === 'actual_cost' && r.category === 'Total');
+    const pay = payments.filter((r) => r.type === 'PAY').reduce((s, r) => s + +r.amount_NGN, 0);
+    const build = +total.cost_NGN;
+    return [{ build_ngn: build, build_usd: +total.cost_USD, revenue_ngn: pay, revenue_share_of_build_pct: Math.round((pay / build) * 1000) / 10 }];
+  },
+});
+
+dash.calc('unit_metrics', {
+  inputs: ['capex', 'opex', 'conn_monthly', 'payments', 'meter_links', 'customers', 'fx'],
+  title: 'Per-connection figures',
+  description: 'Connections are customers who have paid at least once. CAPEX per connection; OPEX and ARPU per active connection per month (NGN, and USD at each year\'s rate), averaged over months; ACPU per reporting meter per day, averaged over months.',
+  fn: (capex, opex, connMonthly, payments, meterLinks, customers, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const sum = (a) => a.reduce((s, x) => s + x, 0);
+    const mean = (a) => sum(a) / a.length;
+    const connections = new Set(payments.filter((r) => r.type === 'PAY').map((r) => r.customer_code)).size;
+    const linked_meters = new Set(meterLinks.map((r) => r.meter_code)).size;
+    const meters_with_readings = new Set(meterLinks.filter((r) => r.meter_has_readings === 'yes').map((r) => r.meter_code)).size;
+    const accounts = customers.filter((r) => r.year_created !== null && r.year_created !== '').length;
+    const build = capex.find((r) => r.record === 'actual_cost' && r.category === 'Total');
+    const rec = opex.filter((r) => (r.item === 'Grid maintenance' || r.item === 'Direct materials') && r.amount !== null && r.amount !== '');
+    const opexYears = [...new Set(rec.map((r) => String(r.period)))].sort();
+    // Each year's recurring cost ÷ that year's average active connections ÷ 12, then averaged over the years.
+    const perYear = opexYears.map((y) => {
+      const ngn = sum(rec.filter((r) => String(r.period) === y).map((r) => +r.amount));
+      const conns = mean(connMonthly.filter((m) => m.month.startsWith(y)).map((m) => m.active_connections));
+      return { ngn: ngn / 12 / conns, usd: ngn / rate.get(y) / 12 / conns };
+    });
+    const last12 = connMonthly.slice(-12);
+    const withUse = connMonthly.filter((m) => m.acpu_wh_day !== null);
+    const last12Use = last12.filter((m) => m.acpu_wh_day !== null);
+    return [{
+      connections,
+      linked_meters,
+      meters_with_readings,
+      accounts,
+      capex_per_connection_usd: Math.round(+build.cost_USD / connections),
+      capex_per_connection_ngn: Math.round(+build.cost_NGN / connections),
+      opex_per_connection_usd_month: Math.round(mean(perYear.map((p) => p.usd)) * 100) / 100,
+      opex_per_connection_ngn_month: Math.round(mean(perYear.map((p) => p.ngn))),
+      opex_years: opexYears[0] + '–' + opexYears[opexYears.length - 1],
+      arpu_usd_month: Math.round(mean(connMonthly.map((m) => m.arpu_usd)) * 100) / 100,
+      arpu_usd_month_last12: Math.round(mean(last12.map((m) => m.arpu_usd)) * 100) / 100,
+      arpu_ngn_month: Math.round(mean(connMonthly.map((m) => m.arpu_ngn))),
+      arpu_ngn_month_last12: Math.round(mean(last12.map((m) => m.arpu_ngn))),
+      acpu_wh_day: Math.round(mean(withUse.map((m) => m.acpu_wh_day))),
+      acpu_wh_day_last12: Math.round(mean(last12Use.map((m) => m.acpu_wh_day))),
+      active_start: connMonthly[0].active_connections,
+      active_end: connMonthly[connMonthly.length - 1].active_connections,
+    }];
+  },
+});
+
+dash.calc('conn_monthly', {
+  inputs: ['payments', 'site_monthly', 'meter_monthly', 'meter_links', 'fx'],
+  title: 'Connections, ARPU and use by month',
+  description: 'Active connections (customers who have paid at least once, from their first payment onward), meters that have started reporting, all credit bought, ARPU in NGN and USD, Wh per reporting meter per day, and cash per kWh from customers whose meter was reporting. Complete months Aug 2020 to Dec 2024.',
+  fn: (payments, siteMonthly, meterMonthly, meterLinks, fx) => {
+    const rate = new Map(fx.map((r) => [String(r.year), +r.ngn_per_usd]));
+    const isNum = (v) => v !== null && v !== undefined && v !== '';
+    // Month each customer first bought credit: from then on they count as an active connection.
+    const firstPay = new Map();
+    const rev = new Map();
+    const pays = payments.filter((r) => r.type === 'PAY');
+    for (const r of pays) {
+      const ym = r.date.slice(0, 7);
+      if (!firstPay.has(r.customer_code) || ym < firstPay.get(r.customer_code)) firstPay.set(r.customer_code, ym);
+      rev.set(ym, (rev.get(ym) || 0) + +r.amount_NGN);
+    }
+    // Month each meter first sent a reading.
+    const firstRead = new Map();
+    for (const r of meterMonthly) if (!firstRead.has(r.meter) || r.month < firstRead.get(r.meter)) firstRead.set(r.meter, r.month);
+    // Revenue from customers whose linked meter had already started reporting.
+    const meterOf = new Map(meterLinks.map((r) => [r.customer_code, r.meter_code]));
+    const revReporting = new Map();
+    for (const r of pays) {
+      const ym = r.date.slice(0, 7);
+      const fr = firstRead.get(meterOf.get(r.customer_code));
+      if (fr && fr <= ym) revReporting.set(ym, (revReporting.get(ym) || 0) + +r.amount_NGN);
+    }
+    const starts = [...firstPay.values()];
+    const reads = [...firstRead.values()];
+    return siteMonthly.filter((m) => m.month >= '2020-08' && m.month <= '2024-12').map((m) => {
+      const fxm = rate.get(m.month.slice(0, 4));
+      const active = starts.filter((f) => f <= m.month).length;
+      const reporting = reads.filter((f) => f <= m.month).length;
+      const ngn = rev.get(m.month) || 0;
+      const days = +m.days_with_meter_data;
+      const meterDays = days * (isNum(m.mean_meters_reporting) ? +m.mean_meters_reporting : 0);
+      const kwh = isNum(m.site_kwh_sum_of_meters) ? +m.site_kwh_sum_of_meters : null;
+      const priceRep = days >= 25 && kwh !== null && kwh >= 100 ? (revReporting.get(m.month) || 0) / kwh : null;
+      return {
+        month: m.month,
+        active_connections: active,
+        meters_reporting: reporting,
+        revenue_ngn: ngn,
+        revenue_usd: Math.round((ngn / fxm) * 100) / 100,
+        arpu_ngn: Math.round(ngn / active),
+        arpu_usd: Math.round((ngn / fxm / active) * 100) / 100,
+        acpu_wh_day: meterDays > 0 && kwh !== null ? Math.round((kwh / meterDays) * 1000) : null,
+        ngn_per_kwh_reporting: priceRep === null ? null : Math.round(priceRep),
+        usd_per_kwh_reporting: priceRep === null ? null : Math.round((priceRep / fxm) * 1000) / 1000,
+      };
+    });
+  },
+});
+</script>
+
+<script>
+// ---------- chart helpers ----------
+window.RMGS = window.RMGS || { metric: 'kwh_per_day', year: '2024', cls: 'all', meter: null, sort: { key: 'kwh', dir: -1 }, cur: 'USD' };
+if (!window.RMGS.cur) window.RMGS.cur = 'USD';
+window.RMG = (() => {
+  const fInt = d3.format(',.0f'), f1 = d3.format(',.1f'), f2 = d3.format(',.2f'), f3 = d3.format(',.3f');
+  const fmt = (v, f) => {
+    if (v === null || v === undefined || v === '') return '—';
+    if (f === 'int') return Number.isFinite(+v) ? fInt(+v) : '—';
+    if (f === '1') return Number.isFinite(+v) ? f1(+v) : '—';
+    if (f === '2') return Number.isFinite(+v) ? f2(+v) : '—';
+    if (f === '3') return Number.isFinite(+v) ? f3(+v) : '—';
+    return String(v);
+  };
+  const usd = () => window.RMGS.cur === 'USD';
+  // Money with its currency: digits chosen per currency.
+  const money = (v, usdDigits, ngnDigits) => {
+    if (v === null || v === undefined || !Number.isFinite(+v)) return '—';
+    return usd() ? '$' + fmt(v, usdDigits || 'int') : 'NGN ' + fmt(v, ngnDigits || 'int');
+  };
+  const moneyAxis = (v) => (usd() ? '$' + d3.format('~s')(v).replace('G', 'B') : 'NGN ' + d3.format('~s')(v).replace('G', 'B'));
+  const month = (s) => { const [y, m] = s.split('-'); return new Date(Date.UTC(+y, +m - 1, 1)); };
+  const day = (s) => { const [y, m, d] = s.split('-'); return new Date(Date.UTC(+y, +m - 1, +d)); };
+  const color = (i) => (dash.colors && dash.colors[i]) || 'currentColor';
+
+  function tooltip(el) {
+    const t = document.createElement('div');
+    t.className = 'rmg-tip'; t.hidden = true; el.appendChild(t);
+    return {
+      show(lines, x, y) {
+        t.replaceChildren(...lines.map((l) => { const d = document.createElement('div'); d.textContent = l; return d; }));
+        t.hidden = false;
+        const w = t.offsetWidth, W = el.clientWidth;
+        t.style.left = Math.max(0, Math.min(W - w, x + 12)) + 'px';
+        t.style.top = Math.max(0, y - 10) + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  }
+
+  function measure(svg, strings) {
+    const p = svg.append('text').attr('class', 'rmg-probe');
+    let w = 0;
+    for (const s of strings) { p.text(s); w = Math.max(w, p.node().getComputedTextLength()); }
+    p.remove();
+    return w || 7 * Math.max(...strings.map((s) => s.length), 1);
+  }
+
+  function fail(el, msg) {
+    el.replaceChildren();
+    const p = document.createElement('p'); p.className = 'rmg-err'; p.textContent = msg; el.appendChild(p);
+  }
+
+  // Time series: series [{name, color, values:[{x:Date,y}], kind:'line'|'bar'|'step', dashed}]
+  function timeSeries(el, o) {
+    el.replaceChildren();
+    const W = Math.max(280, el.clientWidth), H = o.height || 280;
+    const svg = d3.select(el).append('svg').attr('class', 'rmg-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('role', 'img').attr('aria-label', o.label);
+    const pts = o.series.flatMap((s) => s.values.filter((v) => v.y !== null && Number.isFinite(v.y)));
+    if (!pts.length) { fail(el, 'No data in this range.'); return; }
+    const yMax = d3.max(pts, (v) => v.y) || 1;
+    const y = d3.scaleLinear().domain([0, yMax]).nice();
+    const yt = y.ticks(H < 260 ? 4 : 5);
+    const lw = measure(svg, yt.map(o.yFmt));
+    const m = { l: lw + 10, r: 14, t: 12, b: 26 };
+    y.range([H - m.b, m.t]);
+    let xd = d3.extent(o.series.flatMap((s) => s.values.map((v) => v.x)));
+    const hasBar = o.series.some((s) => s.kind === 'bar');
+    if (hasBar) xd = [d3.utcDay.offset(xd[0], -16), d3.utcDay.offset(xd[1], 16)];
+    const x = d3.scaleUtc().domain(xd).range([m.l, W - m.r]);
+    for (const b of o.bands || []) {
+      const x0 = Math.max(m.l, x(b.x0)), x1 = Math.min(W - m.r, x(b.x1));
+      if (x1 <= x0) continue;
+      svg.append('rect').attr('x', x0).attr('y', m.t).attr('width', x1 - x0).attr('height', H - m.b - m.t)
+        .style('fill', 'var(--chart-muted)').style('opacity', 0.25);
+    }
+    svg.append('g').selectAll('line').data(yt).join('line').attr('x1', m.l).attr('x2', W - m.r)
+      .attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).style('stroke', 'var(--chart-grid)');
+    const ya = svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickValues(yt).tickFormat(o.yFmt).tickSize(0).tickPadding(8));
+    ya.select('.domain').remove();
+    const span = (xd[1] - xd[0]) / 864e5;
+    const pxPer = (W - m.l - m.r);
+    let xa;
+    if (span > 500) xa = d3.axisBottom(x).ticks(d3.utcYear.every(pxPer < 300 ? 2 : 1)).tickFormat(d3.utcFormat('%Y'));
+    else xa = d3.axisBottom(x).ticks(d3.utcMonth.every(pxPer < 420 ? 3 : (pxPer < 700 ? 2 : 1))).tickFormat(d3.utcFormat('%b'));
+    const xg = svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(xa.tickSizeOuter(0).tickSize(4));
+    xg.select('.domain').style('stroke', 'var(--chart-axis)');
+    xg.selectAll('.tick line').style('stroke', 'var(--chart-axis)');
+    for (const s of o.series) {
+      if (s.kind === 'bar') {
+        const bw = Math.max(1, (pxPer / Math.max(1, s.values.length)) * 0.75);
+        svg.append('g').selectAll('rect').data(s.values.filter((v) => v.y !== null)).join('rect')
+          .attr('x', (v) => x(v.x) - bw / 2).attr('width', bw).attr('y', (v) => y(v.y)).attr('height', (v) => y(0) - y(v.y))
+          .style('fill', s.color);
+      } else {
+        const line = d3.line().defined((v) => v.y !== null && Number.isFinite(v.y)).x((v) => x(v.x)).y((v) => y(v.y));
+        if (s.kind === 'step') line.curve(d3.curveStepAfter);
+        svg.append('path').attr('d', line(s.values)).style('fill', 'none').style('stroke', s.color)
+          .style('stroke-width', s.width || 2).style('stroke-dasharray', s.dashed ? '5 4' : null);
+      }
+    }
+    const xs = o.series[0].values.map((v) => v.x);
+    const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--chart-reference)').style('opacity', 0);
+    const dots = svg.append('g');
+    const tip = tooltip(el);
+    const bis = d3.bisector((d) => d).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.b - m.t)
+      .style('fill', 'transparent').style('cursor', 'crosshair')
+      .on('pointermove', (ev) => {
+        const [px] = d3.pointer(ev);
+        const i = bis(xs, x.invert(px));
+        const xv = xs[i];
+        rule.attr('x1', x(xv)).attr('x2', x(xv)).style('opacity', 1);
+        const lines = [o.xLabel(xv)];
+        const ds = [];
+        for (const s of o.series) {
+          const v = s.values.find((p) => +p.x === +xv);
+          lines.push(`${s.name}: ${v && v.y !== null && Number.isFinite(v.y) ? o.tipFmt(v.y) : 'no data'}`);
+          if (v && v.y !== null && s.kind !== 'bar') ds.push({ x: x(xv), y: y(v.y), c: s.color });
+        }
+        dots.selectAll('circle').data(ds).join('circle').attr('r', 3.5).attr('cx', (d) => d.x).attr('cy', (d) => d.y).style('fill', (d) => d.c);
+        const scale = el.clientWidth / W;
+        tip.show(lines, x(xv) * scale, d3.pointer(ev, el)[1]);
+      })
+      .on('pointerleave', () => { rule.style('opacity', 0); dots.selectAll('circle').remove(); tip.hide(); });
+  }
+
+  // Bars: items [{label, value, color}], horizontal when o.horizontal
+  function bars(el, o) {
+    el.replaceChildren();
+    const W = Math.max(260, el.clientWidth);
+    const svg = d3.select(el).append('svg').attr('class', 'rmg-svg').attr('width', '100%').attr('role', 'img').attr('aria-label', o.label);
+    const tip = tooltip(el);
+    const vals = o.items.map((d) => o.fmt(d.value));
+    if (o.horizontal) {
+      const row = 30;
+      const H = o.items.length * row + 8;
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+      const lw = measure(svg, o.items.map((d) => d.label)) + 10;
+      const vw = measure(svg, vals) + 8;
+      const x = d3.scaleLinear().domain([0, d3.max(o.items, (d) => d.value) || 1]).range([lw, W - vw]);
+      const g = svg.selectAll('g.r').data(o.items).join('g').attr('transform', (d, i) => `translate(0,${i * row + 4})`);
+      g.append('text').attr('class', 'rmg-axis-text').attr('x', lw - 8).attr('y', row / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d.label);
+      g.append('rect').attr('x', lw).attr('y', 5).attr('height', row - 12).attr('width', (d) => Math.max(1, x(d.value) - lw)).style('fill', (d) => d.color || color(0));
+      g.append('text').attr('class', 'rmg-val').attr('x', (d) => x(d.value) + 6).attr('y', row / 2).attr('dy', '0.32em').text((d, i) => vals[i]);
+      g.on('pointermove', (ev, d) => { const [px, py] = d3.pointer(ev, el); tip.show(o.tip(d), px, py); }).on('pointerleave', () => tip.hide());
+    } else {
+      const H = o.height || 240;
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+      const m = { l: 6, r: 6, t: 20, b: 24 };
+      const x = d3.scaleBand().domain(o.items.map((d) => d.label)).range([m.l, W - m.r]).padding(0.22);
+      const y = d3.scaleLinear().domain([0, d3.max(o.items, (d) => d.value) || 1]).range([H - m.b, m.t]);
+      svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--chart-axis)');
+      const g = svg.selectAll('g.c').data(o.items).join('g');
+      g.append('rect').attr('x', (d) => x(d.label)).attr('width', x.bandwidth()).attr('y', (d) => y(d.value)).attr('height', (d) => y(0) - y(d.value)).style('fill', (d) => d.color || color(0));
+      const showVals = x.bandwidth() >= measure(svg, vals) - 2;
+      if (showVals) g.append('text').attr('class', 'rmg-val').attr('x', (d) => x(d.label) + x.bandwidth() / 2).attr('y', (d) => y(d.value) - 5).attr('text-anchor', 'middle').text((d, i) => vals[i]);
+      g.append('text').attr('class', 'rmg-axis-text').attr('x', (d) => x(d.label) + x.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((d) => d.label);
+      g.on('pointermove', (ev, d) => { const [px, py] = d3.pointer(ev, el); tip.show(o.tip(d), px, py); }).on('pointerleave', () => tip.hide());
+    }
+  }
+
+  return { fmt, money, moneyAxis, usd, month, day, color, tooltip, timeSeries, bars, fail };
+})();
+</script>
+
+<script>
+// ---------- controls (listen, set aria/hidden, redraw) ----------
+(() => {
+  const S = window.RMGS;
+  const wire = (attr, key, after) => {
+    const btns = [...document.querySelectorAll(`button[data-${attr}]`)];
+    for (const b of btns) {
+      b.addEventListener('click', () => {
+        S[key] = b.dataset[attr];
+        for (const o of btns) o.setAttribute('aria-pressed', String(o === b));
+        after();
+      });
+    }
+  };
+  const showCurrency = () => {
+    for (const n of document.querySelectorAll('[data-cur-show]')) n.hidden = n.dataset.curShow !== S.cur;
+  };
+  wire('cur', 'cur', () => {
+    showCurrency();
+    try { localStorage.setItem('rmg-cur', S.cur); } catch (e) { /* storage unavailable */ }
+    for (const name of ['v', 'arpuchart', 'timeline', 'yeartable', 'agents', 'opexchart']) dash.draw(name);
+  });
+  // Restore the viewer's last currency choice, if any.
+  try {
+    const saved = localStorage.getItem('rmg-cur');
+    if (saved === 'USD' || saved === 'NGN') {
+      S.cur = saved;
+      for (const b of document.querySelectorAll('button[data-cur]')) b.setAttribute('aria-pressed', String(b.dataset.cur === saved));
+    }
+  } catch (e) { /* storage unavailable */ }
+  showCurrency();
+  wire('metric', 'metric', () => {
+    for (const n of document.querySelectorAll('[data-note]')) n.hidden = n.dataset.note !== S.metric;
+    for (const n of document.querySelectorAll('[data-note-label]')) n.hidden = n.dataset.noteLabel !== S.metric;
+    dash.draw('timeline');
+  });
+  wire('year', 'year', () => dash.draw('daily'));
+  wire('cls', 'cls', () => dash.draw('metertable'));
+  for (const th of document.querySelectorAll('#meter-table th[data-sort]')) {
+    th.addEventListener('click', () => {
+      const k = th.dataset.sort;
+      S.sort = { key: k, dir: S.sort.key === k ? -S.sort.dir : (k === 'meter' || k === 'class' || k === 'first_month' ? 1 : -1) };
+      for (const o of document.querySelectorAll('#meter-table th[data-sort]')) {
+        if (o === th) o.setAttribute('aria-sort', S.sort.dir < 0 ? 'descending' : 'ascending');
+        else o.removeAttribute('aria-sort');
+      }
+      dash.draw('metertable');
+    });
+  }
+})();
+</script>
+
+<script>
+// ---------- drawings ----------
+(() => {
+  const S = window.RMGS, R = window.RMG;
+
+  // A single value. Money values carry data-usd and data-ngn: the field shown follows the currency switch.
+  dash.draw('v', (el) => {
+    const d = dash.data(el.dataset.source);
+    el.classList.toggle('dash-skeleton', d.status === 'loading');
+    let field = el.dataset.field, f = el.dataset.fmt;
+    if (el.dataset.usd && el.dataset.ngn) {
+      field = R.usd() ? el.dataset.usd : el.dataset.ngn;
+      el.dataset.field = field;
+      f = R.usd() ? (el.dataset.fmtUsd || f || 'int') : (el.dataset.fmtNgn || f || 'int');
+    }
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const rows = Array.isArray(d.data) ? d.data : [d.data];
+    let row;
+    if (el.dataset.where) { const [k, v] = el.dataset.where.split('='); row = rows.find((r) => String(r[k]) === v); }
+    else row = rows[+(el.dataset.row || 0)];
+    el.textContent = R.fmt(row ? row[field] : null, f);
+  });
+
+  dash.draw('swatch0', (el) => { el.style.background = R.color(0); });
+  dash.draw('swatch1', (el) => { el.style.background = R.color(1); });
+  dash.draw('swatch2', (el) => { el.style.background = R.color(2); });
+
+  dash.draw('timeline', (el) => {
+    const d = dash.data('monthly');
+    const c = dash.data('conn_monthly');
+    if (d.status === 'error' || c.status === 'error') return R.fail(el, 'The monthly series failed to load.');
+    if (d.status !== 'ok' || !d.data || c.status !== 'ok' || !c.data) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const usd = R.usd();
+    const cBy = new Map(c.data.map((r) => [r.month, r]));
+    const pick = (mo, k) => { const r = cBy.get(mo); return r ? r[k] : null; };
+    const X = (mo) => R.month(mo);
+    let series, yFmt, tipFmt, name;
+    if (S.metric === 'connections') {
+      const months = c.data.map((r) => r.month);
+      name = 'Connections';
+      series = [
+        { name: 'Active connections', color: R.color(0), kind: 'step', values: months.map((mo) => ({ x: X(mo), y: pick(mo, 'active_connections') })) },
+        { name: 'Meters reporting', color: R.color(1), kind: 'step', values: months.map((mo) => ({ x: X(mo), y: pick(mo, 'meters_reporting') })) },
+      ];
+      yFmt = (v) => R.fmt(v, 'int'); tipFmt = yFmt;
+    } else if (S.metric === 'cash') {
+      name = 'Cash collected';
+      series = [{ name, color: R.color(0), kind: 'bar', values: d.data.map((r) => ({ x: X(r.month), y: usd ? r.usd : r.ngn })) }];
+      yFmt = R.moneyAxis; tipFmt = (v) => R.money(v, 'int', 'int');
+    } else if (S.metric === 'price') {
+      name = 'Price per kWh';
+      series = [
+        { name: 'All cash per metered kWh', color: R.color(0), kind: 'line', values: d.data.map((r) => ({ x: X(r.month), y: usd ? r.usd_per_kwh : r.ngn_per_kwh })) },
+        { name: 'Reporting customers only', color: R.color(1), kind: 'line', values: d.data.map((r) => ({ x: X(r.month), y: pick(r.month, usd ? 'usd_per_kwh_reporting' : 'ngn_per_kwh_reporting') })) },
+        { name: 'Stated tariff', color: 'var(--chart-reference)', kind: 'step', dashed: true, width: 1.5, values: d.data.map((r) => ({ x: X(r.month), y: usd ? r.tariff_usd : r.tariff })) },
+      ];
+      yFmt = (v) => (usd ? '$' + d3.format('.2~f')(v) : 'NGN ' + R.fmt(v, 'int'));
+      tipFmt = (v) => R.money(v, '3', 'int');
+    } else {
+      name = 'kWh per day';
+      series = [{ name, color: R.color(0), kind: 'line', values: d.data.map((r) => ({ x: X(r.month), y: r.kwh_per_day })) }];
+      yFmt = (v) => R.fmt(v, 'int'); tipFmt = (v) => R.fmt(v, '1');
+    }
+    R.timeSeries(el, {
+      label: `${name} by month`,
+      series, height: 300, yFmt, tipFmt,
+      xLabel: d3.utcFormat('%b %Y'),
+      bands: [{ x0: R.month('2023-04'), x1: R.month('2023-07') }],
+    });
+  });
+
+  dash.draw('yeartable', (tb) => {
+    const d = dash.data('yearly');
+    if (d.status !== 'ok') { tb.replaceChildren(); return; }
+    const usd = R.usd();
+    const cols = [['year'], ['days', 'int'], ['kwh', 'int'], ['kwh_per_day', '1'], ['usd', 'int', 'USD'], ['ngn', 'int', 'NGN'], ['payments', 'int'], ['usd_per_kwh', '3', 'USD'], ['ngn_per_kwh', 'int', 'NGN'], ['mean_meters', '1']];
+    tb.replaceChildren(...d.data.map((r) => {
+      const tr = document.createElement('tr');
+      for (const [k, f, cur] of cols) {
+        const td = document.createElement('td');
+        td.textContent = R.fmt(r[k], f);
+        if (cur) td.hidden = cur !== (usd ? 'USD' : 'NGN');
+        tr.appendChild(td);
+      }
+      return tr;
+    }));
+  });
+
+  dash.draw('daily', (el) => {
+    const d = dash.data('site_daily');
+    if (d.status === 'error') return R.fail(el, 'The daily series failed to load.');
+    if (d.status !== 'ok') { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const num = (v) => (v === null || v === undefined || v === '' ? null : +v);
+    const rows = d.data.filter((r) => S.year === 'all' || r.date.startsWith(S.year));
+    R.timeSeries(el, {
+      label: `Daily site kWh, ${S.year === 'all' ? 'all years' : S.year}`,
+      height: 260,
+      series: [
+        { name: 'Sum of meters', color: R.color(0), kind: 'line', width: 1.25, values: rows.map((r) => ({ x: R.day(r.date), y: num(r.site_kwh_sum_of_meters) })) },
+        { name: 'Site-level series', color: R.color(1), kind: 'line', width: 1.25, values: rows.map((r) => ({ x: R.day(r.date), y: num(r.site_kwh_community_series) })) },
+      ],
+      yFmt: (v) => R.fmt(v, 'int'), tipFmt: (v) => R.fmt(v, '1') + ' kWh', xLabel: d3.utcFormat('%a %d %b %Y'),
+    });
+  });
+
+  const sortedMeters = () => {
+    const d = dash.data('meters');
+    if (d.status !== 'ok') return null;
+    const k = S.sort.key, dir = S.sort.dir;
+    return d.data.filter((r) => S.cls === 'all' || r.class === S.cls)
+      .slice().sort((a, b) => (a[k] < b[k] ? -1 : a[k] > b[k] ? 1 : 0) * dir);
+  };
+
+  dash.draw('metertable', (tb) => {
+    const rows = sortedMeters();
+    if (!rows) { tb.replaceChildren(); return; }
+    const cols = [['meter'], ['class'], ['kwh', '1'], ['share_pct', '1'], ['kwh_per_day', '3'], ['zero_pct', '1'], ['first_month'], ['last_month']];
+    const sel = S.meter || (dash.data('meters').data[0] || {}).meter;
+    tb.replaceChildren(...rows.map((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = r.meter;
+      tr.tabIndex = 0;
+      if (r.meter === sel) tr.classList.add('rmg-sel');
+      cols.forEach(([k, f], i) => { const td = document.createElement('td'); td.textContent = R.fmt(r[k], f); if (i === 1) td.className = 'rmg-l'; tr.appendChild(td); });
+      const pick = () => {
+        S.meter = r.meter;
+        for (const o of tb.querySelectorAll('tr')) o.classList.toggle('rmg-sel', o === tr);
+        dash.draw('metername'); dash.draw('meterstats'); dash.draw('meterchart');
+      };
+      tr.addEventListener('click', pick);
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+      return tr;
+    }));
+  });
+
+  const currentMeter = () => {
+    const d = dash.data('meters');
+    if (d.status !== 'ok' || !d.data.length) return null;
+    return d.data.find((r) => r.meter === S.meter) || d.data[0];
+  };
+
+  dash.draw('metername', (el) => {
+    const m = currentMeter();
+    el.textContent = m ? `${m.meter} · ${m.class}` : '—';
+  });
+
+  dash.draw('meterstats', (el) => {
+    const m = currentMeter();
+    if (!m) { el.textContent = '—'; return; }
+    const d = dash.data('meters');
+    const rank = d.data.indexOf(m) + 1;
+    const items = [['Rank', `${rank} of ${d.data.length}`, null], ['Total', R.fmt(m.kwh, '1') + ' kWh', 'kwh'], ['Share', R.fmt(m.share_pct, '1') + '%', 'share_pct'], ['Per day', R.fmt(m.kwh_per_day, '3') + ' kWh', 'kwh_per_day'], ['Zero days', R.fmt(m.zero_pct, '1') + '%', 'zero_pct']];
+    el.replaceChildren(...items.map(([l, v, f]) => {
+      const s = document.createElement('span');
+      s.append(l + ' ');
+      const b = document.createElement('b'); b.textContent = v;
+      if (f) { b.dataset.source = 'meters'; b.dataset.field = f; b.dataset.where = 'meter=' + encodeURIComponent(m.meter); }
+      s.appendChild(b);
+      return s;
+    }));
+  });
+
+  dash.draw('meterchart', (el) => {
+    const d = dash.data('meter_monthly');
+    if (d.status === 'error') return R.fail(el, 'The per-meter file failed to load.');
+    const m = currentMeter();
+    if (d.status !== 'ok' || !m) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const all = dash.data('monthly');
+    const months = all.status === 'ok' ? all.data.map((r) => r.month) : [...new Set(d.data.map((r) => r.month))].sort();
+    const byMonth = new Map(d.data.filter((r) => r.meter === m.meter).map((r) => [r.month, r]));
+    R.timeSeries(el, {
+      label: `Monthly mean kWh per day for meter ${m.meter}`,
+      height: 240,
+      series: [{ name: m.meter, color: m.class === 'residential' ? R.color(0) : R.color(1), kind: 'line',
+        values: months.map((mo) => { const r = byMonth.get(mo); return { x: R.month(mo), y: r && r.days ? r.kwh / r.days : null }; }) }],
+      yFmt: (v) => R.fmt(v, '2'), tipFmt: (v) => R.fmt(v, '3') + ' kWh/day', xLabel: d3.utcFormat('%b %Y'),
+      bands: [{ x0: R.month('2023-04'), x1: R.month('2023-07') }],
+    });
+  });
+
+  dash.draw('agents', (el) => {
+    const d = dash.data('agents');
+    if (d.status === 'error') return R.fail(el, 'Payments failed to load.');
+    if (d.status !== 'ok') { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    const usd = R.usd();
+    R.bars(el, {
+      horizontal: true, label: `Credit sold by agent, ${usd ? 'USD' : 'NGN'}`,
+      items: d.data.map((r) => ({ label: r.agent.replace('RMG01-', ''), value: usd ? r.usd : r.ngn, row: r })),
+      fmt: (v) => (usd ? '$' : 'NGN ') + d3.format('.3~s')(v),
+      tip: (it) => [it.row.agent, `NGN ${R.fmt(it.row.ngn, 'int')} ($${R.fmt(it.row.usd, 'int')})`, `${R.fmt(it.row.payments, 'int')} top-ups`, `${R.fmt(it.row.share_pct, '1')}% of sales`],
+    });
+  });
+
+  dash.draw('topups', (el) => {
+    const d = dash.data('topups');
+    if (d.status === 'error') return R.fail(el, 'Payments failed to load.');
+    if (d.status !== 'ok') { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    R.bars(el, {
+      label: 'Number of top-ups by amount band, NGN', height: 220,
+      items: d.data.map((r) => ({ label: r.band, value: r.count })),
+      fmt: (v) => R.fmt(v, 'int'),
+      tip: (it) => [`NGN ${it.label}`, `${R.fmt(it.value, 'int')} top-ups`],
+    });
+  });
+
+  dash.draw('season', (el) => {
+    const d = dash.data('season');
+    if (d.status === 'error') return R.fail(el, 'The daily series failed to load.');
+    if (d.status !== 'ok') { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    R.bars(el, {
+      label: 'Mean kWh per reporting meter per day, by calendar month', height: 230,
+      items: d.data.map((r) => ({ label: r.month, value: r.kwh_per_meter_day, row: r })),
+      fmt: (v) => R.fmt(v, '2'),
+      tip: (it) => [it.label, `${R.fmt(it.value, '3')} kWh per meter-day`, `${R.fmt(it.row.days, 'int')} days`],
+    });
+  });
+
+  dash.draw('arpuchart', (el) => {
+    const d = dash.data('conn_monthly');
+    if (d.status === 'error') return R.fail(el, 'The ARPU series failed to load.');
+    if (d.status !== 'ok' || !d.data || !d.data.length) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    el.replaceChildren();
+    const usd = R.usd();
+    const arpu = (r) => (usd ? r.arpu_usd : r.arpu_ngn);
+    const rows = d.data.map((r) => ({ ...r, x: R.month(r.month) }));
+    const W = Math.max(280, el.clientWidth), H = 300;
+    const svg = d3.select(el).append('svg').attr('class', 'rmg-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('role', 'img').attr('aria-label', `Monthly ARPU in ${usd ? 'USD' : 'NGN'} per active connection, active connections and meters that have started reporting, Aug 2020 to Dec 2024`);
+    const yL = d3.scaleLinear().domain([0, d3.max(rows, arpu) || 1]).nice();
+    const yR = d3.scaleLinear().domain([0, d3.max(rows, (r) => Math.max(r.active_connections, r.meters_reporting)) || 1]).nice();
+    const tL = yL.ticks(5), tR = yR.ticks(5);
+    const probe = svg.append('text').attr('class', 'rmg-probe');
+    const wOf = (arr) => d3.max(arr, (s) => { probe.text(s); return probe.node().getComputedTextLength(); }) || 30;
+    const fL = (v) => (usd ? '$' + d3.format('.2~f')(v) : 'NGN ' + d3.format(',')(v));
+    const fR = (v) => d3.format(',')(v);
+    const m = { l: wOf(tL.map(fL)) + 10, r: wOf(tR.map(fR)) + 10, t: 12, b: 26 };
+    probe.remove();
+    yL.range([H - m.b, m.t]); yR.range([H - m.b, m.t]);
+    const x = d3.scaleUtc().domain(d3.extent(rows, (r) => r.x)).range([m.l, W - m.r]);
+    const x0 = Math.max(m.l, x(R.month('2023-04'))), x1 = Math.min(W - m.r, x(R.month('2023-07')));
+    svg.append('rect').attr('x', x0).attr('y', m.t).attr('width', Math.max(0, x1 - x0)).attr('height', H - m.b - m.t).style('fill', 'var(--chart-muted)').style('opacity', 0.25);
+    svg.append('g').selectAll('line').data(tL).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (v) => yL(v)).attr('y2', (v) => yL(v)).style('stroke', 'var(--chart-grid)');
+    const gl = svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(yL).tickValues(tL).tickFormat(fL).tickSize(0).tickPadding(8));
+    gl.select('.domain').remove();
+    gl.selectAll('text').style('fill', R.color(0));
+    const gr = svg.append('g').attr('transform', `translate(${W - m.r},0)`).call(d3.axisRight(yR).tickValues(tR).tickFormat(fR).tickSize(0).tickPadding(8));
+    gr.select('.domain').remove();
+    gr.selectAll('text').style('fill', R.color(1));
+    const pxw = W - m.l - m.r;
+    const xg = svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(d3.utcYear.every(pxw < 300 ? 2 : 1)).tickFormat(d3.utcFormat('%Y')).tickSizeOuter(0).tickSize(4));
+    xg.select('.domain').style('stroke', 'var(--chart-axis)');
+    xg.selectAll('.tick line').style('stroke', 'var(--chart-axis)');
+    svg.append('path').attr('d', d3.line().curve(d3.curveStepAfter).x((r) => x(r.x)).y((r) => yR(r.meters_reporting))(rows))
+      .style('fill', 'none').style('stroke', R.color(1)).style('stroke-width', 1.5).style('stroke-dasharray', '4 3');
+    svg.append('path').attr('d', d3.line().curve(d3.curveStepAfter).x((r) => x(r.x)).y((r) => yR(r.active_connections))(rows))
+      .style('fill', 'none').style('stroke', R.color(1)).style('stroke-width', 2);
+    svg.append('path').attr('d', d3.line().x((r) => x(r.x)).y((r) => yL(arpu(r)))(rows))
+      .style('fill', 'none').style('stroke', R.color(0)).style('stroke-width', 2);
+    const last = rows[rows.length - 1];
+    svg.append('circle').attr('r', 3.5).attr('cx', x(last.x)).attr('cy', yL(arpu(last))).style('fill', R.color(0));
+    const tip = R.tooltip(el);
+    const rule = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).style('stroke', 'var(--chart-reference)').style('opacity', 0);
+    const dots = svg.append('g');
+    const bis = d3.bisector((r) => r.x).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', pxw).attr('height', H - m.b - m.t).style('fill', 'transparent').style('cursor', 'crosshair')
+      .on('pointermove', (ev) => {
+        const r = rows[bis(rows, x.invert(d3.pointer(ev)[0]))];
+        rule.attr('x1', x(r.x)).attr('x2', x(r.x)).style('opacity', 1);
+        dots.selectAll('circle').data([[yL(arpu(r)), R.color(0)], [yR(r.active_connections), R.color(1)], [yR(r.meters_reporting), R.color(1)]]).join('circle')
+          .attr('r', 3.5).attr('cx', x(r.x)).attr('cy', (p) => p[0]).style('fill', (p) => p[1]);
+        const [px, py] = d3.pointer(ev, el);
+        tip.show([d3.utcFormat('%b %Y')(r.x), `ARPU: ${R.money(arpu(r), '2', 'int')}`, `Active connections: ${R.fmt(r.active_connections, 'int')}`, `Meters reporting: ${R.fmt(r.meters_reporting, 'int')}`, `Credit bought: NGN ${R.fmt(r.revenue_ngn, 'int')} ($${R.fmt(r.revenue_usd, 'int')})`], px, py);
+      })
+      .on('pointerleave', () => { rule.style('opacity', 0); dots.selectAll('circle').remove(); tip.hide(); });
+  });
+
+  const cellRow = (cells) => {
+    const tr = document.createElement('tr');
+    for (const [text, cls] of cells) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (cls) td.className = cls;
+      tr.appendChild(td);
+    }
+    return tr;
+  };
+
+  dash.draw('capextable', (tb) => {
+    const d = dash.data('capex');
+    if (d.status !== 'ok') { tb.replaceChildren(); return; }
+    const label = { actual_cost: 'Actual', actual_cost_derived: 'Actual, derived', pre_construction_estimate: '2019 estimate' };
+    tb.replaceChildren(...d.data.map((r) => {
+      const tr = cellRow([
+        [label[r.record] || r.record, 'rmg-l'],
+        [r.category, 'rmg-l'],
+        [r.items_included || '', 'rmg-l rmg-wrap'],
+        [R.fmt(r.cost_NGN, 'int')],
+        [R.fmt(r.cost_USD, 'int')],
+        [R.fmt(r.share_of_total_pct, '1')],
+        [R.fmt(r.exchange_rate_NGN_per_USD, 'int')],
+        [r.notes || '', 'rmg-l rmg-wrap'],
+      ]);
+      tr.dataset.key = encodeURIComponent(r.record) + ',' + encodeURIComponent(r.category);
+      if (r.category === 'Total') tr.classList.add('rmg-total');
+      if (r.record === 'pre_construction_estimate') tr.classList.add('rmg-dim');
+      return tr;
+    }));
+  });
+
+  dash.draw('opextable', (tb) => {
+    const d = dash.data('opex');
+    if (d.status !== 'ok') { tb.replaceChildren(); return; }
+    tb.replaceChildren(...d.data.map((r) => {
+      const tr = cellRow([
+        [r.period || '', 'rmg-l'],
+        [r.item, 'rmg-l rmg-wrap'],
+        [r.amount === null || r.amount === '' ? 'Not recorded' : R.fmt(r.amount, 'int')],
+        [r.unit || '', 'rmg-l rmg-wrap'],
+      ]);
+      tr.dataset.key = encodeURIComponent(r.period || '') + ',' + encodeURIComponent(r.item);
+      return tr;
+    }));
+  });
+
+  dash.draw('opexchart', (el) => {
+    const d = dash.data('opex_years');
+    if (d.status === 'error') return R.fail(el, 'The cost lines failed to load.');
+    if (d.status !== 'ok' || !d.data) { el.replaceChildren(); el.classList.add('dash-skeleton'); return; }
+    el.classList.remove('dash-skeleton');
+    el.replaceChildren();
+    const usd = R.usd();
+    const sfx = usd ? '_usd' : '';
+    const keys = [['cash_collected' + sfx, 'Cash collected', R.color(0)], ['recurring' + sfx, 'Maintenance + materials', R.color(1)], ['one_off' + sfx, 'One-off repairs', R.color(2)]];
+    const W = Math.max(260, el.clientWidth), H = 260, m = { l: 6, r: 6, t: 22, b: 26 };
+    const svg = d3.select(el).append('svg').attr('class', 'rmg-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('role', 'img').attr('aria-label', `Cash collected, maintenance and materials, and one-off repairs by year in ${usd ? 'USD' : 'NGN'}, 2022 to 2024`);
+    const x0 = d3.scaleBand().domain(d.data.map((r) => r.year)).range([m.l, W - m.r]).padding(0.18);
+    const x1 = d3.scaleBand().domain(keys.map((k) => k[0])).range([0, x0.bandwidth()]).padding(0.08);
+    const max = d3.max(d.data, (r) => d3.max(keys, (k) => +r[k[0]] || 0)) || 1;
+    const y = d3.scaleLinear().domain([0, max]).range([H - m.b, m.t]);
+    const short = (v) => (usd ? '$' : '') + d3.format('.3~s')(v);
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).style('stroke', 'var(--chart-axis)');
+    const tip = R.tooltip(el);
+    for (const r of d.data) {
+      const g = svg.append('g').attr('transform', `translate(${x0(r.year)},0)`);
+      for (const [k, name, c] of keys) {
+        const v = +r[k] || 0;
+        if (!v) continue;
+        g.append('rect').attr('x', x1(k)).attr('width', x1.bandwidth()).attr('y', y(v)).attr('height', y(0) - y(v)).style('fill', c)
+          .on('pointermove', (ev) => {
+            const lines = [`${r.year} · ${name}`, R.money(v, 'int', 'int')];
+            if (k.startsWith('recurring') && r.cost_share_pct !== null) lines.push(`${r.cost_share_pct}% of cash collected`);
+            const [px, py] = d3.pointer(ev, el);
+            tip.show(lines, px, py);
+          })
+          .on('pointerleave', () => tip.hide());
+        if (x1.bandwidth() >= 30) g.append('text').attr('class', 'rmg-val').attr('x', x1(k) + x1.bandwidth() / 2).attr('y', y(v) - 5).attr('text-anchor', 'middle').text(short(v));
+      }
+      g.append('text').attr('class', 'rmg-axis-text').attr('x', x0.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle').text(r.year);
+    }
+  });
+})();
+</script>
+<script>dash.start();</script>
+</body>
+</html>
